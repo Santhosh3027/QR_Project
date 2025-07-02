@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OCPQR Generator</title>
+</head>
+<body>
+  <h1>Generate OCPQR QR Code</h1>
+  <form action="/generate" method="POST">
+    <label>Format:</label>
+    <select name="format">
+      <option value="CSV">CSV</option>
+      <option value="JSON">JSON</option>
+    </select><br><br>
+
+    <label>Charge Box ID:</label>
+    <input type="text" name="chargeBoxId" required><br><br>
+
+    <label>EVSE ID:</label>
+    <input type="text" name="evseId"><br><br>
+
+    <label>Connector ID:</label>
+    <input type="text" name="connectorId"><br><br>
+
+    <button type="submit">Generate</button>
+  </form>
+</body>
+</html>
