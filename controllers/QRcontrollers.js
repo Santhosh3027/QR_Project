@@ -1,16 +1,10 @@
-const QRdata = require('../models/QRmodels');
 const QRCode = require('qrcode');
 
 const generateQR = async (req, res) => {
   const { format, chargeBoxId, evseId, connectorId } = req.body;
 
-  if (!format || !chargeBoxId || !evseId || !connectorId) {
-    return res.status(400).render('error', { message: "Missing data fields" });
-  }
-
-  const existingQR = await QRdata.findOne({ chargeBoxId });
-  if (existingQR) {
-    return res.status(409).render('error', { message: "ChargeBox ID already exists" });
+  if (!format || !chargeBoxId || (connectorId && !evseId) ) {
+    return res.status(404).render('error', { message: "You can create a QR code using both connectorId and evseId, or using only connectorId, but not with just chargeBoxId and connectorId." });
   }
 
   // Build QR content
@@ -28,21 +22,7 @@ const generateQR = async (req, res) => {
   }
 
   try {
-    // Generate QR Image (Base64 PNG)
     const qrImage = await QRCode.toDataURL(qrData);
-
-    // Store everything in MongoDB
-    const storeinput = new QRdata({
-      format,
-      chargeBoxId,
-      evseId,
-      connectorId,
-      qrData,
-      qrImage
-    });
-    await storeinput.save();
-
-    // Show QR code in browser
     return res.render('result', { qrImage, qrData });
 
   } catch (err) {
@@ -51,25 +31,5 @@ const generateQR = async (req, res) => {
   }
 };
 
-const searchQRbyID = async(req,res)=>{
-    const {chargeBoxId}=req.body;
-     if(!chargeBoxId){
-        res.status(400).json({message:"chargeBoxId missing"})
-    }
-    try{
-    const findQR = await QRdata.findOne({chargeBoxId});
-    if(!findQR){
-        res.status(404).json({message:"Generate QR First"})
-    }
-    res.status(200).json({
-        chargeBoxId: findQR.chargeBoxId,
-        qrData: findQR.qrData,
-        qrImage: findQR.qrImage 
-    })
-    }catch(err){
-        onsole.error('Error in searchQRbyID:', err);
-        res.status(500).json({message:"server error"})
-    }
-    
-}
-module.exports = { generateQR , searchQRbyID};
+
+module.exports = { generateQR};
