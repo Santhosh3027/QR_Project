@@ -54,14 +54,22 @@ export class QrGeneratorComponent {
     let qrData = '';
 
     if (formValue.format === 'CSV') {
-      qrData = `OCPQR011.0,${formValue.chargeBoxId},${formValue.evseId || ''},${formValue.connectorId || ''}`;
+      qrData = `OCPQR011.0,${formValue.chargeBoxId}`;
+      if (formValue.evseId){
+        qrData += `,${formValue.evseId}`;
+        if(formValue.connectorId){
+          qrData+=`,${formValue.connectorId}`;
+        }
+      }
     } else if (formValue.format === 'JSON') {
-      const jsonData = {
+      const jsonData : any = {
         f0: '1.0',
         f1: formValue.chargeBoxId,
-        f2: formValue.evseId || '',
-        f3: formValue.connectorId || ''
-      };
+      };if (formValue.evseId){
+        jsonData.f2=formValue.evseId
+      }if(formValue.connectorId){
+        jsonData.f3=formValue.connectorId;
+      }
       qrData = `OCPQR02${JSON.stringify(jsonData)}`;
     } else {
       alert("Invalid format.");
@@ -73,8 +81,8 @@ export class QrGeneratorComponent {
         width: finalResolution,
         margin: 2,
         color: {
-          dark: '#000000',  // QR code color
-          light: '#ffffff' // Background color
+          dark: '#000000', 
+          light: '#ffffff' 
         }
       });
       this.qrData = qrData;
