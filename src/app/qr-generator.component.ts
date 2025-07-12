@@ -110,15 +110,31 @@ export class QrGeneratorComponent {
         };
       };
 
-      if (this.uploadedLogo) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          drawLogo(reader.result as string);
-        };
-        reader.readAsDataURL(this.uploadedLogo);
-      } else {
-        drawLogo('assets/images.png');
-      }
+if (this.uploadedLogo) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const logo = new Image();
+    logo.src = reader.result as string;
+    logo.onload = () => {
+      this.drawLogoOnQR(ctx, logo, finalResolution, canvas, qrData);
+    };
+    logo.onerror = () => {
+      console.warn("Failed to load uploaded logo. Proceeding without logo.");
+      this.qrImage = canvas.toDataURL();
+      this.qrData = qrData;
+    };
+  };
+  reader.onerror = () => {
+    console.warn("Failed to read uploaded logo. Proceeding without logo.");
+    this.qrImage = canvas.toDataURL();
+    this.qrData = qrData;
+  };
+  reader.readAsDataURL(this.uploadedLogo);
+} else {
+  this.qrImage = canvas.toDataURL();
+  this.qrData = qrData;
+}
+
 
     } catch (err) {
       console.error("QR generation failed:", err);
