@@ -1,57 +1,63 @@
 <h1 class="title">Generate OCPQR QR Code</h1>
-
-<form [formGroup]="qrForm" (ngSubmit)="onSubmit()" class="qr-form">
-  <div class="form-group">
-    <label class="form-label">Format:</label>
-    <select formControlName="format" required class="form-select">
-      <option value="CSV">CSV</option>
-      <option value="JSON">JSON</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Charge Box ID:</label>
-    <input type="text" formControlName="chargeBoxId" required class="form-input">
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">EVSE ID (optional):</label>
-    <input type="text" formControlName="evseId" class="form-input">
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Connector ID (optional):</label>
-    <input type="text" formControlName="connectorId" class="form-input">
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Resolution (pixel):</label>
-    <div class="resolution-container">
-      <select formControlName="resolution" (change)="toggleCustomInput()" required class="form-select">
-        <option value="200">200</option>
-        <option value="400">400</option>
-        <option value="600">600</option>
-        <option value="800">800</option>
-        <option value="custom">Custom</option>
+<div class="qr-container">
+  <form [formGroup]="qrForm" (ngSubmit)="onSubmit()" class="qr-form">
+    <div class="form-group">
+      <label class="form-label">Format:</label>
+      <select formControlName="format" required class="form-select">
+        <option value="CSV">CSV</option>
+        <option value="JSON">JSON</option>
       </select>
-      <input
-        *ngIf="showCustomInput"
-        type="number"
-        formControlName="customResolution"
-        placeholder="Enter custom resolution"
-        class="form-input custom-resolution"
-      >
     </div>
-  </div>
 
-  <button type="submit" class="generate-btn">Generate QR Code</button>
-</form>
+    <div class="form-group">
+      <label class="form-label">Charge Box ID:</label>
+      <input type="text" formControlName="chargeBoxId" required class="form-input">
+    </div>
 
-<div *ngIf="qrImage && qrData" class="qr-result">
-  <hr class="divider">
-  <h2 class="result-title">Generated QR Code</h2>
-  <div class="qr-image-container">
-    <img [src]="qrImage" alt="QR Code" class="qr-image">
+    <div class="form-group">
+      <label class="form-label">EVSE ID (optional):</label>
+      <input type="text" formControlName="evseId" class="form-input">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Connector ID (optional):</label>
+      <input type="text" formControlName="connectorId" class="form-input">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Resolution (pixel):</label>
+      <div class="resolution-container">
+        <select formControlName="resolution" (change)="toggleCustomInput()" required class="form-select">
+          <option value="200">200</option>
+          <option value="400">400</option>
+          <option value="600">600</option>
+          <option value="800">800</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input
+          *ngIf="showCustomInput"
+          type="number"
+          formControlName="customResolution"
+          placeholder="Enter custom resolution"
+          class="form-input custom-resolution"
+        >
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Upload Logo (optional):</label>
+      <input type="file" (change)="onLogoSelected($event)" accept="image/*" class="form-input">
+    </div>
+
+    <button type="submit" class="generate-btn">Generate QR Code</button>
+  </form>
+
+  <div *ngIf="qrImage && qrData" class="qr-result">
+    <hr class="divider">
+    <h2 class="result-title">Generated QR Code</h2>
+    <div class="qr-image-container">
+      <img [src]="qrImage" alt="QR Code" class="qr-image">
+    </div>
+    <p class="qr-content"><strong>QR Content:</strong> {{ qrData }}</p>
   </div>
-  <p class="qr-content"><strong>QR Content:</strong> {{ qrData }}</p>
 </div>

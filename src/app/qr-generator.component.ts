@@ -15,6 +15,7 @@ export class QrGeneratorComponent {
   qrImage: string | null = null;
   qrData: string | null = null;
   showCustomInput = false;
+  uploadedLogo: File | null = null;
 
   constructor(private fb: FormBuilder) {
     this.qrForm = this.fb.group({
@@ -30,6 +31,13 @@ export class QrGeneratorComponent {
   toggleCustomInput(): void {
     const resolution = this.qrForm.get('resolution')?.value;
     this.showCustomInput = resolution === 'custom';
+  }
+
+  onLogoSelected(event: Event): void {
+    const fileInput = event.target as HTMLInputElement;
+    if (fileInput.files && fileInput.files.length > 0) {
+      this.uploadedLogo = fileInput.files[0];
+    }
   }
 
   async onSubmit(): Promise<void> {
@@ -55,21 +63,19 @@ export class QrGeneratorComponent {
 
     if (formValue.format === 'CSV') {
       qrData = `OCPQR011.0,${formValue.chargeBoxId}`;
-      if (formValue.evseId){
+      if (formValue.evseId) {
         qrData += `,${formValue.evseId}`;
-        if(formValue.connectorId){
-          qrData+=`,${formValue.connectorId}`;
+        if (formValue.connectorId) {
+          qrData += `,${formValue.connectorId}`;
         }
       }
     } else if (formValue.format === 'JSON') {
-      const jsonData : any = {
+      const jsonData: any = {
         f0: '1.0',
         f1: formValue.chargeBoxId,
-      };if (formValue.evseId){
-        jsonData.f2=formValue.evseId
-      }if(formValue.connectorId){
-        jsonData.f3=formValue.connectorId;
-      }
+      };
+      if (formValue.evseId) jsonData.f2 = formValue.evseId;
+      if (formValue.connectorId) jsonData.f3 = formValue.connectorId;
       qrData = `OCPQR02${JSON.stringify(jsonData)}`;
     } else {
       alert("Invalid format.");
@@ -77,18 +83,82 @@ export class QrGeneratorComponent {
     }
 
     try {
-      this.qrImage = await QRCode.toDataURL(qrData, {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = finalResolution;
+
+      await QRCode.toCanvas(canvas, qrData, {
         width: finalResolution,
         margin: 2,
         color: {
-          dark: '#000000', 
-          light: '#ffffff' 
+          dark: '#000000',
+          light: '#ffffff'
         }
       });
-      this.qrData = qrData;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("Canvas context not available");
+
+      const logo = new Image();
+
+      const drawLogo = (src: string) => {
+        logo.src = src;
+        logo.onload = () => {
+          this.drawLogoOnQR(ctx, logo, finalResolution, canvas, qrData);
+        };
+        logo.onerror = () => {
+          alert("Error loading logo image.");
+        };
+      };
+
+      if (this.uploadedLogo) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          drawLogo(reader.result as string);
+        };
+        reader.readAsDataURL(this.uploadedLogo);
+      } else {
+        drawLogo('assets/images.png');
+      }
+
     } catch (err) {
       console.error("QR generation failed:", err);
       alert("QR generation failed. Please check the console for details.");
     }
+  }
+
+  private drawLogoOnQR(
+    ctx: CanvasRenderingContext2D,
+    logo: HTMLImageElement,
+    resolution: number,
+    canvas: HTMLCanvasElement,
+    qrData: string
+  ): void {
+    const imgSize = resolution * 0.24;
+    const x = (resolution - imgSize) / 2;
+    const y = (resolution - imgSize) / 2;
+    const cornerRadius = imgSize * 0.15;
+
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    this.drawRoundedRect(ctx, x, y, imgSize, imgSize, cornerRadius);
+    ctx.fill();
+
+    ctx.drawImage(logo, x, y, imgSize, imgSize);
+
+    this.qrImage = canvas.toDataURL();
+    this.qrData = qrData;
+  }
+
+  private drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number): void {
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
   }
 }

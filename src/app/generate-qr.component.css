@@ -1,7 +1,7 @@
 /* General Styles */
 :host {
   display: block;
-  max-width: 800px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 2rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -21,17 +21,23 @@
   animation: fadeIn 0.8s ease-in-out;
 }
 
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
 /* Form Styles */
 .qr-form {
   background: white;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   animation: slideUp 0.5s ease-out;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   animation: fadeIn 0.5s ease-in-out;
 }
 
@@ -128,7 +134,6 @@
 .divider {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #3498db, transparent);
   margin: 2rem 0;
 }
 
@@ -174,11 +179,11 @@
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(20px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
@@ -189,17 +194,42 @@
   .title {
     font-size: 2rem;
   }
-  
+
   .qr-form {
     padding: 1.5rem;
   }
-  
+
   .resolution-container {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .custom-resolution {
     width: 100%;
+  }
+
+  .qr-container {
+    flex-direction: column;
+  }
+
+  .qr-result {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 769px) {
+  .qr-container {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .qr-form {
+    flex: 1;
+  }
+
+  .qr-result {
+    flex: 1;
+    margin-top: 0;
+    margin-left: 2rem;
   }
 }
