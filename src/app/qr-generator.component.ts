@@ -24,6 +24,9 @@ export class QrGeneratorComponent {
   };
   shareSupported = false;
   copied = false;
+   showModal = false;
+  modalMessage = '';
+  modalTitle = 'Validation Required';
   shapeOptions = [
     { value: 'square', label: 'Square', icon: '■' },
     { value: 'circle', label: 'Circle', icon: '●' },
@@ -60,7 +63,15 @@ export class QrGeneratorComponent {
       }
     });
   }
+ openModal(title: string, message: string): void {
+    this.modalTitle = title;
+    this.modalMessage = message;
+    this.showModal = true;
+  }
 
+  closeModal(): void {
+    this.showModal = false;
+  }
   toggleCustomInput(): void {
     const resolution = this.qrForm.get('resolution')?.value;
     this.showCustomInput = resolution === 'custom';
@@ -94,10 +105,11 @@ export class QrGeneratorComponent {
 
     const formValue = this.qrForm.value;
 
-    if (formValue.connectorId && !formValue.evseId) {
-      alert("To use Connector ID, you must also provide EVSE ID.");
-      return;
-    }
+   if (formValue.connectorId && !formValue.evseId) {
+  this.modalMessage = "To use Connector ID, you must also provide EVSE ID.";
+  this.showModal = true;
+  return;
+}
 
     let finalResolution = parseInt(formValue.resolution);
     if (formValue.resolution === 'custom') {
@@ -134,12 +146,10 @@ export class QrGeneratorComponent {
       alert("Invalid format.");
       return;
     }
-
-    try {
+ try {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = finalResolution;
 
-      // Generate QR code data (array of modules)
       const qrCode = await QRCode.create(qrData, {
         errorCorrectionLevel: formValue.errorCorrection
       });
@@ -147,10 +157,8 @@ export class QrGeneratorComponent {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error("Canvas context not available");
 
-      // Draw QR code with custom shapes
       this.drawCustomQR(ctx, qrCode, finalResolution, formValue);
 
-      // Add logo if uploaded
       if (this.uploadedLogo) {
         await this.addLogoToQR(ctx, canvas, finalResolution);
       }
@@ -159,7 +167,7 @@ export class QrGeneratorComponent {
       this.qrData = qrData;
     } catch (err) {
       console.error("QR generation failed:", err);
-      alert("QR generation failed. Please check the console for details.");
+      this.openModal('Generation Error', 'QR generation failed. Please check the console for details.');
     }
   }
 
@@ -340,7 +348,6 @@ export class QrGeneratorComponent {
     document.body.removeChild(link);
   }
 
-
   copyQRData(): void {
     if (!this.qrData) return;
     
@@ -349,5 +356,4 @@ export class QrGeneratorComponent {
       setTimeout(() => this.copied = false, 2000);
     });
   }
-
 }

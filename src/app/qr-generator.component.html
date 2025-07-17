@@ -45,6 +45,15 @@
         <label class="form-label">Upload Logo (optional)</label>
         <input type="file" class="form-input" (change)="onLogoSelected($event)" accept="image/*">
       </div>
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <h3>{{ modalTitle }}</h3>
+      <p>{{ modalMessage }}</p>
+      <button class="modal-close-btn" (click)="closeModal()">OK</button>
+    </div>
+  </div>
+</div>
 <div class="form-group" *ngIf="uploadedLogo">
   <label class="form-label">Logo Size</label>
   <div class="logo-size-controls">
