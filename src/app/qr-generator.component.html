@@ -1,63 +1,125 @@
-<h1 class="title">Generate OCPQR QR Code</h1>
 <div class="qr-container">
-  <form [formGroup]="qrForm" (ngSubmit)="onSubmit()" class="qr-form">
-    <div class="form-group">
-      <label class="form-label">Format:</label>
-      <select formControlName="format" required class="form-select">
-        <option value="CSV">CSV</option>
-        <option value="JSON">JSON</option>
-      </select>
-    </div>
+  <div class="qr-form">
+    <h1 class="title">QR Code Generator</h1>
+    
+    <form [formGroup]="qrForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label class="form-label">Format</label>
+        <select class="form-select" formControlName="format">
+          <option value="CSV">CSV</option>
+          <option value="JSON">JSON</option>
+        </select>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Charge Box ID:</label>
-      <input type="text" formControlName="chargeBoxId" required class="form-input">
-    </div>
+      <div class="form-group">
+        <label class="form-label">Charge Box ID *</label>
+        <input type="text" class="form-input" formControlName="chargeBoxId" required>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">EVSE ID (optional):</label>
-      <input type="text" formControlName="evseId" class="form-input">
-    </div>
+      <div class="form-group">
+        <label class="form-label">EVSE ID (optional)</label>
+        <input type="text" class="form-input" formControlName="evseId">
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Connector ID (optional):</label>
-      <input type="text" formControlName="connectorId" class="form-input">
-    </div>
+      <div class="form-group">
+        <label class="form-label">Connector ID (optional)</label>
+        <input type="text" class="form-input" formControlName="connectorId">
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Resolution (pixel):</label>
-      <div class="resolution-container">
-        <select formControlName="resolution" (change)="toggleCustomInput()" required class="form-select">
-          <option value="200">200</option>
-          <option value="400">400</option>
-          <option value="600">600</option>
-          <option value="800">800</option>
+      <div class="form-group">
+        <label class="form-label">Resolution</label>
+        <select class="form-select" formControlName="resolution" (change)="toggleCustomInput()">
+          <option value="200">200x200</option>
+          <option value="300">300x300</option>
+          <option value="400">400x400</option>
           <option value="custom">Custom</option>
         </select>
-        <input
-          *ngIf="showCustomInput"
-          type="number"
-          formControlName="customResolution"
-          placeholder="Enter custom resolution"
-          class="form-input custom-resolution"
-        >
+      </div>
+
+      <div class="form-group custom-resolution" *ngIf="showCustomInput">
+        <label class="form-label">Custom Resolution (px)</label>
+        <input type="number" class="form-input" formControlName="customResolution" min="100" max="1000">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Upload Logo (optional)</label>
+        <input type="file" class="form-input" (change)="onLogoSelected($event)" accept="image/*">
+      </div>
+
+      <button type="button" class="advanced-toggle" (click)="toggleAdvancedOptions()">
+        {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
+      </button>
+
+      <div class="advanced-options" *ngIf="showAdvancedOptions">
+        <div class="form-group">
+          <label class="form-label">QR Shape</label>
+          <div class="shape-options">
+            <label *ngFor="let shape of shapeOptions" [class.active]="qrForm.get('shapeType')?.value === shape.value">
+              <input type="radio" name="shapeType" [value]="shape.value" 
+                    formControlName="shapeType" [attr.title]="shape.label">
+              <span class="shape-icon">{{shape.icon}}</span>
+              <span class="shape-label">{{shape.label}}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">QR Color</label>
+          <input type="color" class="form-input" formControlName="qrColor">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Background Color</label>
+          <input type="color" class="form-input" formControlName="bgColor">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Margin</label>
+          <input type="range" class="form-input" formControlName="margin" min="0" max="10" step="1">
+          <span>{{ qrForm.get('margin')?.value }} modules</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Error Correction</label>
+          <select class="form-select" formControlName="errorCorrection">
+            <option value="L">Low (7%)</option>
+            <option value="M">Medium (15%)</option>
+            <option value="Q">Quartile (25%)</option>
+            <option value="H">High (30%)</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="generate-btn">Generate QR Code</button>
+    </form>
+  </div>
+
+  <div class="qr-result" *ngIf="qrImage">
+    <h2 class="result-title">Your QR Code</h2>
+    
+    <div class="qr-image-container">
+      <img [src]="qrImage" class="qr-image" alt="Generated QR Code">
+    </div>
+
+    <div class="qr-actions">
+      <div class="download-options">
+        <label>Download as:</label>
+        <button (click)="setDownloadFormat('png')" [class.active]="downloadOptions.format === 'png'">PNG</button>
+        <button (click)="setDownloadFormat('jpeg')" [class.active]="downloadOptions.format === 'jpeg'">JPEG</button>
+        <button (click)="downloadQR()">Download</button>
+      </div>
+
+      <div class="share-options">
+        <button (click)="shareQR()" *ngIf="shareSupported">Share</button>
+        <button (click)="copyQRData()">
+          {{ copied ? 'Copied!' : 'Copy Data' }}
+        </button>
       </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Upload Logo (optional):</label>
-      <input type="file" (change)="onLogoSelected($event)" accept="image/*" class="form-input">
+    <div class="qr-content">
+      <h3>QR Code Data:</h3>
+      <p>{{ qrData }}</p>
     </div>
-
-    <button type="submit" class="generate-btn">Generate QR Code</button>
-  </form>
-
-  <div *ngIf="qrImage && qrData" class="qr-result">
-    <hr class="divider">
-    <h2 class="result-title">Generated QR Code</h2>
-    <div class="qr-image-container">
-      <img [src]="qrImage" alt="QR Code" class="qr-image">
-    </div>
-    <p class="qr-content"><strong>QR Content:</strong> {{ qrData }}</p>
   </div>
 </div>

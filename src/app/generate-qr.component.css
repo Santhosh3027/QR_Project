@@ -226,4 +226,230 @@
   .qr-result {
     margin-left: 2rem;
   }
+}.form-input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.2);
+  outline: none;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: white;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1.2rem;
+  cursor: pointer;
+}
+
+.custom-resolution {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.advanced-toggle {
+  background: none;
+  border: none;
+  color: #0056b3;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.advanced-toggle:hover {
+  text-decoration: underline;
+}
+
+.advanced-options {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Shape Options */
+.shape-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.shape-options label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+.shape-options label:hover {
+  border-color: #0056b3;
+}
+
+.shape-options label.active {
+  border-color: #0056b3;
+  background-color: rgba(0, 86, 179, 0.1);
+}
+
+.shape-options input[type="radio"] {
+  display: none;
+}
+
+.shape-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.shape-label {
+  font-size: 0.8rem;
+}
+
+/* Button Styles */
+.generate-btn {
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.generate-btn:hover {
+  background-color: #003d82;
+}
+
+/* QR Result Styles */
+.qr-result {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.result-title {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+}
+
+.qr-image-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+
+.qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.download-options, .share-options {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.download-options button, .share-options button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-options button:hover, .share-options button:hover {
+  background: #f0f0f0;
+}
+
+.download-options button.active {
+  background: #0056b3;
+  color: white;
+  border-color: #0056b3;
+}
+
+.qr-content {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  word-break: break-all;
+  font-family: monospace;
+  color: #2c3e50;
+}
+
+.qr-content h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .qr-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .download-options, .share-options {
+    width: 100%;
+    justify-content: center;
+  }
+}/* Logo Size Controls */
+.logo-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.size-btn {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.size-btn:hover {
+  background: #f0f0f0;
+}
+
+.size-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logo-size-controls input[type="range"] {
+  flex: 1;
 }
