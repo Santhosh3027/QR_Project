@@ -45,7 +45,15 @@
         <label class="form-label">Upload Logo (optional)</label>
         <input type="file" class="form-input" (change)="onLogoSelected($event)" accept="image/*">
       </div>
-
+<div class="form-group" *ngIf="uploadedLogo">
+  <label class="form-label">Logo Size</label>
+  <div class="logo-size-controls">
+    <button type="button" class="size-btn" (click)="adjustLogoSize(-5)" [disabled]="qrForm.get('logoSize')?.value <= 5">-</button>
+    <input type="range" class="form-input" formControlName="logoSize" min="5" max="40" step="1">
+    <button type="button" class="size-btn" (click)="adjustLogoSize(5)" [disabled]="qrForm.get('logoSize')?.value >= 40">+</button>
+    <span>{{ qrForm.get('logoSize')?.value }}%</span>
+  </div>
+</div>
       <button type="button" class="advanced-toggle" (click)="toggleAdvancedOptions()">
         {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
       </button>
@@ -104,13 +112,10 @@
     <div class="qr-actions">
       <div class="download-options">
         <label>Download as:</label>
-        <button (click)="setDownloadFormat('png')" [class.active]="downloadOptions.format === 'png'">PNG</button>
-        <button (click)="setDownloadFormat('jpeg')" [class.active]="downloadOptions.format === 'jpeg'">JPEG</button>
         <button (click)="downloadQR()">Download</button>
       </div>
 
       <div class="share-options">
-        <button (click)="shareQR()" *ngIf="shareSupported">Share</button>
         <button (click)="copyQRData()">
           {{ copied ? 'Copied!' : 'Copy Data' }}
         </button>

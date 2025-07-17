@@ -47,10 +47,18 @@ export class QrGeneratorComponent {
       bgColor: ['#ffffff'],
       margin: [2, [Validators.min(0), Validators.max(10)]],
       errorCorrection: ['M'],
-      shapeType: ['square']
+      shapeType: ['square'],
+      logoSize: [24, [Validators.min(5), Validators.max(40)]]
     });
 
     this.shareSupported = navigator.share !== undefined;
+
+    // Regenerate QR when logo size changes
+    this.qrForm.get('logoSize')?.valueChanges.subscribe(() => {
+      if (this.qrData) {
+        this.onSubmit();
+      }
+    });
   }
 
   toggleCustomInput(): void {
@@ -66,6 +74,18 @@ export class QrGeneratorComponent {
     const fileInput = event.target as HTMLInputElement;
     if (fileInput.files && fileInput.files.length > 0) {
       this.uploadedLogo = fileInput.files[0];
+      // Trigger QR regeneration if there's already a QR code
+      if (this.qrData) {
+        this.onSubmit();
+      }
+    }
+  }
+
+  adjustLogoSize(change: number): void {
+    const currentSize = this.qrForm.get('logoSize')?.value;
+    const newSize = currentSize + change;
+    if (newSize >= 5 && newSize <= 40) {
+      this.qrForm.patchValue({ logoSize: newSize });
     }
   }
 
@@ -82,8 +102,12 @@ export class QrGeneratorComponent {
     let finalResolution = parseInt(formValue.resolution);
     if (formValue.resolution === 'custom') {
       finalResolution = parseInt(formValue.customResolution);
-      if (isNaN(finalResolution) || finalResolution <= 0) {
+      if (isNaN(finalResolution) ){
         alert("Please provide a valid custom resolution.");
+        return;
+      }
+      if (finalResolution < 100 || finalResolution > 1000) {
+        alert("Custom resolution must be between 100 and 1000 pixels.");
         return;
       }
     }
@@ -278,7 +302,8 @@ export class QrGeneratorComponent {
     resolution: number,
     canvas: HTMLCanvasElement
   ): void {
-    const imgSize = resolution * 0.24;
+    const logoSizePercentage = this.qrForm.get('logoSize')?.value || 24;
+    const imgSize = resolution * (logoSizePercentage / 100);
     const x = (resolution - imgSize) / 2;
     const y = (resolution - imgSize) / 2;
     const cornerRadius = imgSize * 0.15;
@@ -315,23 +340,6 @@ export class QrGeneratorComponent {
     document.body.removeChild(link);
   }
 
-  async shareQR(): Promise<void> {
-    if (!this.qrImage || !this.shareSupported) return;
-    
-    try {
-      const response = await fetch(this.qrImage.toString());
-      const blob = await response.blob();
-      const file = new File([blob], 'qr-code.png', { type: blob.type });
-      
-      await navigator.share({
-        title: 'Generated QR Code',
-        text: 'Check out this QR code I generated!',
-        files: [file]
-      });
-    } catch (err) {
-      console.error('Error sharing:', err);
-    }
-  }
 
   copyQRData(): void {
     if (!this.qrData) return;
@@ -342,7 +350,4 @@ export class QrGeneratorComponent {
     });
   }
 
-  setDownloadFormat(format: string): void {
-    this.downloadOptions.format = format;
-  }
 }
