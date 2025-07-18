@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 import { CommonModule } from '@angular/common';
 import QRCode from 'qrcode';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-
+import { SecurityContext } from '@angular/core';
 @Component({
   selector: 'app-qr-generator',
   standalone: true,
@@ -337,17 +337,34 @@ export class QrGeneratorComponent {
     ctx.closePath();
   }
 
-  downloadQR(): void {
-    if (!this.qrImage) return;
+downloadQR(): void {
+  if (!this.qrImage) {
+    this.openModal('Download Error', 'No QR code available to download.');
+    return;
+  }
+  
+  try {
+    const url = this.sanitizer.sanitize(SecurityContext.URL, this.qrImage);
+    if (!url) {
+      throw new Error('Invalid image URL');
+    }
     
     const link = document.createElement('a');
-    link.href = this.qrImage.toString();
-    link.download = `qr-code.${this.downloadOptions.format}`;
+    link.href = url;
+    link.download = `qr-code-${new Date().getTime()}.${this.downloadOptions.format}`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    // Clean up after a small delay
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  } catch (err) {
+    console.error('Download failed:', err);
+    this.openModal('Download Error', 'Failed to download QR code. Please try again.');
   }
-
+}
   copyQRData(): void {
     if (!this.qrData) return;
     
