@@ -45,24 +45,32 @@
         <label class="form-label">Upload Logo (optional)</label>
         <input type="file" class="form-input" (change)="onLogoSelected($event)" accept="image/*">
       </div>
-<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-content">
-      <h3>{{ modalTitle }}</h3>
-      <p>{{ modalMessage }}</p>
-      <button class="modal-close-btn" (click)="closeModal()">OK</button>
-    </div>
-  </div>
-</div>
-<div class="form-group" *ngIf="uploadedLogo">
-  <label class="form-label">Logo Size</label>
-  <div class="logo-size-controls">
-    <button type="button" class="size-btn" (click)="adjustLogoSize(-5)" [disabled]="qrForm.get('logoSize')?.value <= 5">-</button>
-    <input type="range" class="form-input" formControlName="logoSize" min="5" max="40" step="1">
-    <button type="button" class="size-btn" (click)="adjustLogoSize(5)" [disabled]="qrForm.get('logoSize')?.value >= 40">+</button>
-    <span>{{ qrForm.get('logoSize')?.value }}%</span>
-  </div>
-</div>
+
+      <div class="form-group" *ngIf="uploadedLogo">
+        <label class="form-label">Logo Size</label>
+        <div class="logo-size-controls">
+          <button type="button" class="size-btn" (click)="adjustLogoSize(-5)" [disabled]="qrForm.get('logoSize')?.value <= 5">-</button>
+          <input type="range" class="form-input" formControlName="logoSize" min="5" max="40" step="1">
+          <button type="button" class="size-btn" (click)="adjustLogoSize(5)" [disabled]="qrForm.get('logoSize')?.value >= 40">+</button>
+          <span>{{ qrForm.get('logoSize')?.value }}%</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Background Image (optional)</label>
+        <input type="file" class="form-input" (change)="onBackgroundSelected($event)" accept="image/*">
+      </div>
+
+      <div class="form-group" *ngIf="uploadedBackground">
+        <label class="form-label">Background Opacity</label>
+        <div class="opacity-controls">
+          <button type="button" class="size-btn" (click)="adjustBgOpacity(-0.1)" [disabled]="qrForm.get('bgOpacity')?.value <= 0.1">-</button>
+          <input type="range" class="form-input" formControlName="bgOpacity" min="0.1" max="1" step="0.1">
+          <button type="button" class="size-btn" (click)="adjustBgOpacity(0.1)" [disabled]="qrForm.get('bgOpacity')?.value >= 1">+</button>
+          <span>{{ (qrForm.get('bgOpacity')?.value * 100).toFixed(0) }}%</span>
+        </div>
+      </div>
+
       <button type="button" class="advanced-toggle" (click)="toggleAdvancedOptions()">
         {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
       </button>
@@ -134,6 +142,16 @@
     <div class="qr-content">
       <h3>QR Code Data:</h3>
       <p>{{ qrData }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <h3>{{ modalTitle }}</h3>
+      <p>{{ modalMessage }}</p>
+      <button class="modal-close-btn" (click)="closeModal()">OK</button>
     </div>
   </div>
 </div>

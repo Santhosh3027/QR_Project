@@ -421,13 +421,13 @@
     width: 100%;
     justify-content: center;
   }
-}/* Logo Size Controls */
-.logo-size-controls {
+}
+.logo-size-controls,
+.opacity-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
-
 .size-btn {
   width: 2rem;
   height: 2rem;

@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import QRCode from 'qrcode';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { SecurityContext } from '@angular/core';
+
 @Component({
   selector: 'app-qr-generator',
   standalone: true,
@@ -17,6 +18,7 @@ export class QrGeneratorComponent {
   qrData: string | null = null;
   showCustomInput = false;
   uploadedLogo: File | null = null;
+  uploadedBackground: File | null = null;
   showAdvancedOptions = false;
   downloadOptions = {
     format: 'png',
@@ -24,9 +26,10 @@ export class QrGeneratorComponent {
   };
   shareSupported = false;
   copied = false;
-   showModal = false;
+  showModal = false;
   modalMessage = '';
   modalTitle = 'Validation Required';
+  
   shapeOptions = [
     { value: 'square', label: 'Square', icon: '■' },
     { value: 'circle', label: 'Circle', icon: '●' },
@@ -51,19 +54,27 @@ export class QrGeneratorComponent {
       margin: [2, [Validators.min(0), Validators.max(10)]],
       errorCorrection: ['M'],
       shapeType: ['square'],
-      logoSize: [24, [Validators.min(5), Validators.max(40)]]
+      logoSize: [24, [Validators.min(5), Validators.max(40)]],
+      bgOpacity: [0.5, [Validators.min(0.1), Validators.max(1)]]
     });
 
     this.shareSupported = navigator.share !== undefined;
 
-    // Regenerate QR when logo size changes
+    // Regenerate QR when logo size or background opacity changes
     this.qrForm.get('logoSize')?.valueChanges.subscribe(() => {
       if (this.qrData) {
         this.onSubmit();
       }
     });
+    
+    this.qrForm.get('bgOpacity')?.valueChanges.subscribe(() => {
+      if (this.qrData) {
+        this.onSubmit();
+      }
+    });
   }
- openModal(title: string, message: string): void {
+
+  openModal(title: string, message: string): void {
     this.modalTitle = title;
     this.modalMessage = message;
     this.showModal = true;
@@ -72,6 +83,7 @@ export class QrGeneratorComponent {
   closeModal(): void {
     this.showModal = false;
   }
+
   toggleCustomInput(): void {
     const resolution = this.qrForm.get('resolution')?.value;
     this.showCustomInput = resolution === 'custom';
@@ -85,7 +97,16 @@ export class QrGeneratorComponent {
     const fileInput = event.target as HTMLInputElement;
     if (fileInput.files && fileInput.files.length > 0) {
       this.uploadedLogo = fileInput.files[0];
-      // Trigger QR regeneration if there's already a QR code
+      if (this.qrData) {
+        this.onSubmit();
+      }
+    }
+  }
+
+  onBackgroundSelected(event: Event): void {
+    const fileInput = event.target as HTMLInputElement;
+    if (fileInput.files && fileInput.files.length > 0) {
+      this.uploadedBackground = fileInput.files[0];
       if (this.qrData) {
         this.onSubmit();
       }
@@ -100,26 +121,43 @@ export class QrGeneratorComponent {
     }
   }
 
+  adjustBgOpacity(change: number): void {
+    const currentOpacity = this.qrForm.get('bgOpacity')?.value;
+    const newOpacity = currentOpacity + change;
+    if (newOpacity >= 0.1 && newOpacity <= 1) {
+      this.qrForm.patchValue({ bgOpacity: newOpacity });
+    }
+  }
+
   async onSubmit(): Promise<void> {
-    if (this.qrForm.invalid) return;
+      if (!this.qrForm.get('chargeBoxId')?.value) {
+    this.openModal('Validation Error', 'Charge Box ID is required to generate QR code');
+    return;
+  }
+
+  // Then check if form is invalid
+  if (this.qrForm.invalid) {
+    this.openModal('Validation Error', 'Please fill in all required fields');
+    return;
+  }
 
     const formValue = this.qrForm.value;
 
-   if (formValue.connectorId && !formValue.evseId) {
-  this.modalMessage = "To use Connector ID, you must also provide EVSE ID.";
-  this.showModal = true;
-  return;
-}
+    if (formValue.connectorId && !formValue.evseId) {
+      this.modalMessage = "To use Connector ID, you must also provide EVSE ID.";
+      this.showModal = true;
+      return;
+    }
 
     let finalResolution = parseInt(formValue.resolution);
     if (formValue.resolution === 'custom') {
       finalResolution = parseInt(formValue.customResolution);
-      if (isNaN(finalResolution) ){
-        alert("Please provide a valid custom resolution.");
+      if (isNaN(finalResolution)) {
+        this.openModal('Invalid Resolution', 'Please provide a valid custom resolution.');
         return;
       }
       if (finalResolution < 100 || finalResolution > 1000) {
-        alert("Custom resolution must be between 100 and 1000 pixels.");
+        this.openModal('Invalid Resolution', 'Custom resolution must be between 100 and 1000 pixels.');
         return;
       }
     }
@@ -143,10 +181,11 @@ export class QrGeneratorComponent {
       if (formValue.connectorId) jsonData.f3 = formValue.connectorId;
       qrData = `OCPQR02${JSON.stringify(jsonData)}`;
     } else {
-      alert("Invalid format.");
+      this.openModal('Invalid Format', 'Please select a valid format (CSV or JSON).');
       return;
     }
- try {
+
+    try {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = finalResolution;
 
@@ -157,7 +196,7 @@ export class QrGeneratorComponent {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error("Canvas context not available");
 
-      this.drawCustomQR(ctx, qrCode, finalResolution, formValue);
+      await this.drawCustomQR(ctx, qrCode, finalResolution, formValue);
 
       if (this.uploadedLogo) {
         await this.addLogoToQR(ctx, canvas, finalResolution);
@@ -171,18 +210,24 @@ export class QrGeneratorComponent {
     }
   }
 
-  private drawCustomQR(
+  private async drawCustomQR(
     ctx: CanvasRenderingContext2D,
     qrCode: QRCode.QRCode,
     size: number,
     options: any
-  ): void {
+  ): Promise<void> {
     const moduleCount = qrCode.modules.size;
     const moduleSize = size / (moduleCount + 2 * options.margin);
     const offset = options.margin * moduleSize;
 
-    ctx.fillStyle = options.bgColor;
-    ctx.fillRect(0, 0, size, size);
+    // Draw background image if available
+    if (this.uploadedBackground) {
+      await this.drawBackgroundImage(ctx, size, options.bgOpacity);
+    } else {
+      // Fall back to solid color background
+      ctx.fillStyle = options.bgColor;
+      ctx.fillRect(0, 0, size, size);
+    }
 
     ctx.fillStyle = options.qrColor;
 
@@ -304,6 +349,44 @@ export class QrGeneratorComponent {
     });
   }
 
+  private async drawBackgroundImage(
+    ctx: CanvasRenderingContext2D,
+    size: number,
+    opacity: number
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.uploadedBackground) {
+        resolve();
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const bgImg = new Image();
+        bgImg.src = reader.result as string;
+        bgImg.onload = () => {
+          // Draw the background image to cover the entire canvas
+          ctx.drawImage(bgImg, 0, 0, size, size);
+          
+          // Add a semi-transparent overlay to ensure QR remains readable
+          ctx.fillStyle = `rgba(255, 255, 255, ${1 - opacity})`;
+          ctx.fillRect(0, 0, size, size);
+          
+          resolve();
+        };
+        bgImg.onerror = () => {
+          console.warn("Failed to load background image. Using solid color instead.");
+          resolve();
+        };
+      };
+      reader.onerror = () => {
+        console.warn("Failed to read background image. Using solid color instead.");
+        resolve();
+      };
+      reader.readAsDataURL(this.uploadedBackground);
+    });
+  }
+
   private drawLogoOnQR(
     ctx: CanvasRenderingContext2D,
     logo: HTMLImageElement,
@@ -337,34 +420,34 @@ export class QrGeneratorComponent {
     ctx.closePath();
   }
 
-downloadQR(): void {
-  if (!this.qrImage) {
-    this.openModal('Download Error', 'No QR code available to download.');
-    return;
-  }
-  
-  try {
-    const url = this.sanitizer.sanitize(SecurityContext.URL, this.qrImage);
-    if (!url) {
-      throw new Error('Invalid image URL');
+  downloadQR(): void {
+    if (!this.qrImage) {
+      this.openModal('Download Error', 'No QR code available to download.');
+      return;
     }
     
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `qr-code-${new Date().getTime()}.${this.downloadOptions.format}`;
-    document.body.appendChild(link);
-    link.click();
-    
-    // Clean up after a small delay
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
-  } catch (err) {
-    console.error('Download failed:', err);
-    this.openModal('Download Error', 'Failed to download QR code. Please try again.');
+    try {
+      const url = this.sanitizer.sanitize(SecurityContext.URL, this.qrImage);
+      if (!url) {
+        throw new Error('Invalid image URL');
+      }
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `qr-code-${new Date().getTime()}.${this.downloadOptions.format}`;
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error('Download failed:', err);
+      this.openModal('Download Error', 'Failed to download QR code. Please try again.');
+    }
   }
-}
+
   copyQRData(): void {
     if (!this.qrData) return;
     
