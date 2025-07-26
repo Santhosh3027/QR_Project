@@ -29,19 +29,20 @@ export class QrGeneratorComponent {
   showModal = false;
   modalMessage = '';
   modalTitle = 'Validation Required';
-  
+  private previousQrColor = '#000000';
+
   shapeOptions = [
     { value: 'square', label: 'Square', icon: '■' },
     { value: 'circle', label: 'Circle', icon: '●' },
     { value: 'rounded', label: 'Rounded', icon: '▢' },
     { value: 'star', label: 'Star', icon: '★' },
-    { value: 'diamond', label: 'Diamond', icon: '◆' }
+    { value: 'diamond', label: 'Diamond', icon: '◆' },
+    { value: 'triangle', label: 'Triangle', icon: '▲' },
+    { value: 'dot', label: 'Dot', icon: '•' },
+    { value: 'heart', label: 'Heart', icon: '❤' }
   ];
 
-  constructor(
-    private fb: FormBuilder,
-    private sanitizer: DomSanitizer
-  ) {
+  constructor(private fb: FormBuilder, private sanitizer: DomSanitizer) {
     this.qrForm = this.fb.group({
       format: ['CSV', Validators.required],
       chargeBoxId: ['', Validators.required],
@@ -54,23 +55,20 @@ export class QrGeneratorComponent {
       margin: [2, [Validators.min(0), Validators.max(10)]],
       errorCorrection: ['M'],
       shapeType: ['square'],
-      logoSize: [24, [Validators.min(5), Validators.max(40)]],
-      bgOpacity: [0.5, [Validators.min(0.1), Validators.max(1)]]
+      logoSize: [15, [Validators.min(5), Validators.max(40)]],
+      bgOpacity: [0.5, [Validators.min(0.1), Validators.max(1)]],
+      squaresColor: ['#000000'],
+      pixelsColor: ['#000000']
     });
 
     this.shareSupported = navigator.share !== undefined;
 
-    // Regenerate QR when logo size or background opacity changes
     this.qrForm.get('logoSize')?.valueChanges.subscribe(() => {
-      if (this.qrData) {
-        this.onSubmit();
-      }
+      if (this.qrData) this.onSubmit();
     });
-    
+
     this.qrForm.get('bgOpacity')?.valueChanges.subscribe(() => {
-      if (this.qrData) {
-        this.onSubmit();
-      }
+      if (this.qrData) this.onSubmit();
     });
   }
 
@@ -95,365 +93,396 @@ export class QrGeneratorComponent {
 
   onLogoSelected(event: Event): void {
     const fileInput = event.target as HTMLInputElement;
-    if (fileInput.files && fileInput.files.length > 0) {
+    if (fileInput.files?.length) {
       this.uploadedLogo = fileInput.files[0];
-      if (this.qrData) {
-        this.onSubmit();
-      }
+      if (this.qrData) this.onSubmit();
     }
   }
 
   onBackgroundSelected(event: Event): void {
     const fileInput = event.target as HTMLInputElement;
-    if (fileInput.files && fileInput.files.length > 0) {
+    if (fileInput.files?.length) {
       this.uploadedBackground = fileInput.files[0];
-      if (this.qrData) {
-        this.onSubmit();
-      }
+      if (this.qrData) this.onSubmit();
     }
   }
 
   adjustLogoSize(change: number): void {
-    const currentSize = this.qrForm.get('logoSize')?.value;
-    const newSize = currentSize + change;
+    const size = this.qrForm.get('logoSize')?.value;
+    const newSize = size + change;
     if (newSize >= 5 && newSize <= 40) {
       this.qrForm.patchValue({ logoSize: newSize });
     }
   }
 
   adjustBgOpacity(change: number): void {
-    const currentOpacity = this.qrForm.get('bgOpacity')?.value;
-    const newOpacity = currentOpacity + change;
+    const opacity = this.qrForm.get('bgOpacity')?.value;
+    const newOpacity = +(opacity + change).toFixed(2);
     if (newOpacity >= 0.1 && newOpacity <= 1) {
       this.qrForm.patchValue({ bgOpacity: newOpacity });
     }
   }
 
+  onQrColorChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const newColor = input.value;
+    
+    this.qrForm.patchValue({
+      qrColor: newColor,
+      squaresColor: newColor,
+      pixelsColor: newColor
+    });
+    
+    this.previousQrColor = newColor;
+    
+    if (this.qrData) {
+      this.onSubmit();
+    }
+  }
+
+  removeLogo(): void {
+    this.uploadedLogo = null;
+    if (this.qrData) {
+      this.onSubmit();
+    }
+  }
+
   async onSubmit(): Promise<void> {
-      if (!this.qrForm.get('chargeBoxId')?.value) {
-    this.openModal('Validation Error', 'Charge Box ID is required to generate QR code');
-    return;
-  }
-
-  // Then check if form is invalid
-  if (this.qrForm.invalid) {
-    this.openModal('Validation Error', 'Please fill in all required fields');
-    return;
-  }
-
-    const formValue = this.qrForm.value;
-
-    if (formValue.connectorId && !formValue.evseId) {
-      this.modalMessage = "To use Connector ID, you must also provide EVSE ID.";
-      this.showModal = true;
+    if (!this.qrForm.get('chargeBoxId')?.value) {
+      this.openModal('Validation Error', 'Charge Box ID is required.');
       return;
     }
 
-    let finalResolution = parseInt(formValue.resolution);
-    if (formValue.resolution === 'custom') {
-      finalResolution = parseInt(formValue.customResolution);
-      if (isNaN(finalResolution)) {
-        this.openModal('Invalid Resolution', 'Please provide a valid custom resolution.');
-        return;
-      }
-      if (finalResolution < 100 || finalResolution > 1000) {
-        this.openModal('Invalid Resolution', 'Custom resolution must be between 100 and 1000 pixels.');
+    if (this.qrForm.invalid) {
+      this.openModal('Validation Error', 'Please fill in all required fields.');
+      return;
+    }
+
+    const form = this.qrForm.value;
+
+    if (form.connectorId && !form.evseId) {
+      this.openModal('Validation Error', 'Connector ID requires EVSE ID.');
+      return;
+    }
+
+    let resolution = parseInt(form.resolution);
+    if (form.resolution === 'custom') {
+      resolution = parseInt(form.customResolution);
+      if (isNaN(resolution) || resolution < 100 || resolution > 1000) {
+        this.openModal('Invalid Resolution', 'Resolution must be between 100 and 1000.');
         return;
       }
     }
 
     let qrData = '';
-
-    if (formValue.format === 'CSV') {
-      qrData = `OCPQR011.0,${formValue.chargeBoxId}`;
-      if (formValue.evseId) {
-        qrData += `,${formValue.evseId}`;
-        if (formValue.connectorId) {
-          qrData += `,${formValue.connectorId}`;
+    if (form.format === 'CSV') {
+      qrData = `OCPQR011.0,${form.chargeBoxId}`;
+      if (form.evseId) {
+        qrData += `,${form.evseId}`;
+        if (form.connectorId) {
+          qrData += `,${form.connectorId}`;
         }
       }
-    } else if (formValue.format === 'JSON') {
+    } else if (form.format === 'JSON') {
       const jsonData: any = {
         f0: '1.0',
-        f1: formValue.chargeBoxId,
+        f1: form.chargeBoxId
       };
-      if (formValue.evseId) jsonData.f2 = formValue.evseId;
-      if (formValue.connectorId) jsonData.f3 = formValue.connectorId;
+      if (form.evseId) jsonData.f2 = form.evseId;
+      if (form.connectorId) jsonData.f3 = form.connectorId;
       qrData = `OCPQR02${JSON.stringify(jsonData)}`;
     } else {
-      this.openModal('Invalid Format', 'Please select a valid format (CSV or JSON).');
+      this.openModal('Invalid Format', 'Format must be CSV or JSON.');
       return;
     }
 
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = finalResolution;
-
-      const qrCode = await QRCode.create(qrData, {
-        errorCorrectionLevel: formValue.errorCorrection
-      });
-
+      canvas.width = canvas.height = resolution;
+      const qrCode = await QRCode.create(qrData, { errorCorrectionLevel: form.errorCorrection });
       const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error("Canvas context not available");
-
-      await this.drawCustomQR(ctx, qrCode, finalResolution, formValue);
-
+      if (!ctx) throw new Error('Canvas context not found');
+      
+      // Draw the QR code first
+      await this.drawCustomQR(ctx, qrCode, resolution, form);
+      
+      // Then add the logo if it exists
       if (this.uploadedLogo) {
-        await this.addLogoToQR(ctx, canvas, finalResolution);
+        await this.addLogoToQR(ctx, canvas, resolution);
       }
 
       this.qrImage = this.sanitizer.bypassSecurityTrustUrl(canvas.toDataURL(`image/${this.downloadOptions.format}`, this.downloadOptions.quality));
       this.qrData = qrData;
-    } catch (err) {
-      console.error("QR generation failed:", err);
-      this.openModal('Generation Error', 'QR generation failed. Please check the console for details.');
+    } catch (error) {
+      console.error('QR generation failed:', error);
+      this.openModal('Generation Error', 'QR code generation failed.');
     }
   }
 
-  private async drawCustomQR(
-    ctx: CanvasRenderingContext2D,
-    qrCode: QRCode.QRCode,
-    size: number,
-    options: any
-  ): Promise<void> {
+  private async drawCustomQR(ctx: CanvasRenderingContext2D, qrCode: QRCode.QRCode, size: number, options: any): Promise<void> {
     const moduleCount = qrCode.modules.size;
     const moduleSize = size / (moduleCount + 2 * options.margin);
     const offset = options.margin * moduleSize;
 
-    // Draw background image if available
-    if (this.uploadedBackground) {
-      await this.drawBackgroundImage(ctx, size, options.bgOpacity);
-    } else {
-      // Fall back to solid color background
-      ctx.fillStyle = options.bgColor;
-      ctx.fillRect(0, 0, size, size);
-    }
-
-    ctx.fillStyle = options.qrColor;
+    await this.drawBackground(ctx, size, options);
 
     for (let y = 0; y < moduleCount; y++) {
       for (let x = 0; x < moduleCount; x++) {
         if (qrCode.modules.get(x, y)) {
           const xPos = offset + x * moduleSize;
           const yPos = offset + y * moduleSize;
-
-          switch (options.shapeType) {
-            case 'circle':
-              this.drawCircle(ctx, xPos, yPos, moduleSize);
-              break;
-            case 'rounded':
-              this.drawRoundedSquare(ctx, xPos, yPos, moduleSize, moduleSize / 4);
-              break;
-            case 'star':
-              this.drawStar(ctx, xPos, yPos, moduleSize);
-              break;
-            case 'diamond':
-              this.drawDiamond(ctx, xPos, yPos, moduleSize);
-              break;
-            default: // square
-              ctx.fillRect(xPos, yPos, moduleSize, moduleSize);
+          
+          // Set color based on module type
+          if (this.isPositionPattern(x, y, moduleCount) || 
+              this.isAlignmentPattern(x, y, qrCode.version) ||
+              this.isTimingPattern(x, y, moduleCount)) {
+            ctx.fillStyle = options.squaresColor;
+          } else {
+            ctx.fillStyle = options.pixelsColor;
           }
+          
+          this.drawModule(ctx, xPos, yPos, moduleSize, options.shapeType);
         }
       }
     }
   }
 
-  private drawCircle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
-    ctx.beginPath();
-    ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
-    ctx.fill();
+  private isPositionPattern(x: number, y: number, moduleCount: number): boolean {
+    return (x < 7 && y < 7) || // Top-left
+           (x > moduleCount - 8 && y < 7) || // Top-right
+           (x < 7 && y > moduleCount - 8); // Bottom-left
   }
 
-  private drawRoundedSquare(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, radius: number): void {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + size - radius, y);
-    ctx.quadraticCurveTo(x + size, y, x + size, y + radius);
-    ctx.lineTo(x + size, y + size - radius);
-    ctx.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-    ctx.lineTo(x + radius, y + size);
-    ctx.quadraticCurveTo(x, y + size, x, y + size - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-    ctx.fill();
+  private isAlignmentPattern(x: number, y: number, version: number): boolean {
+    if (version < 2) return false;
+    
+    const locations = this.getAlignmentPatternLocations(version);
+    return locations.some(loc => {
+      return x >= loc.x - 2 && x <= loc.x + 2 && 
+             y >= loc.y - 2 && y <= loc.y + 2;
+    });
   }
 
-  private drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
-    const spikes = 5;
-    const outerRadius = size / 2;
-    const innerRadius = outerRadius / 2;
-    const cx = x + outerRadius;
-    const cy = y + outerRadius;
-    let rot = Math.PI / 2 * 3;
-    let xPos = cx;
-    let yPos = cy - outerRadius;
-    const step = Math.PI / spikes;
-
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - outerRadius);
-
-    for (let i = 0; i < spikes; i++) {
-      xPos = cx + Math.cos(rot) * outerRadius;
-      yPos = cy + Math.sin(rot) * outerRadius;
-      ctx.lineTo(xPos, yPos);
-      rot += step;
-
-      xPos = cx + Math.cos(rot) * innerRadius;
-      yPos = cy + Math.sin(rot) * innerRadius;
-      ctx.lineTo(xPos, yPos);
-      rot += step;
-    }
-
-    ctx.lineTo(cx, cy - outerRadius);
-    ctx.closePath();
-    ctx.fill();
+  private isTimingPattern(x: number, y: number, moduleCount: number): boolean {
+    return (x === 6 && y >= 8 && y <= moduleCount - 9) || // Vertical timing
+           (y === 6 && x >= 8 && x <= moduleCount - 9);   // Horizontal timing
   }
 
-  private drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
-    const halfSize = size / 2;
-    ctx.beginPath();
-    ctx.moveTo(x + halfSize, y);
-    ctx.lineTo(x + size, y + halfSize);
-    ctx.lineTo(x + halfSize, y + size);
-    ctx.lineTo(x, y + halfSize);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  private async addLogoToQR(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, resolution: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.uploadedLogo) {
-        resolve();
-        return;
+  private getAlignmentPatternLocations(version: number): {x: number, y: number}[] {
+    if (version < 2) return [];
+    
+    const locations = [];
+    const step = Math.floor((version * 4 + 12) / 7);
+    for (let i = 4; i < version * 4 + 13 - 4; i += step) {
+      for (let j = 4; j < version * 4 + 13 - 4; j += step) {
+        if (!((i < 9 && j < 9) || 
+             (i < 9 && j > version * 4 + 13 - 9) || 
+             (i > version * 4 + 13 - 9 && j < 9))) {
+          locations.push({x: i, y: j});
+        }
       }
+    }
+    return locations;
+  }
 
+  private async drawBackground(ctx: CanvasRenderingContext2D, size: number, options: any): Promise<void> {
+    if (this.uploadedBackground) {
+      await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.globalAlpha = options.bgOpacity;
+            ctx.drawImage(img, 0, 0, size, size);
+            ctx.globalAlpha = 1.0;
+            resolve(null);
+          };
+          img.src = reader.result as string;
+        };
+        reader.readAsDataURL(this.uploadedBackground!);
+      });
+    } else {
+      ctx.fillStyle = options.bgColor;
+      ctx.fillRect(0, 0, size, size);
+    }
+  }
+
+  private drawModule(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, shape: string): void {
+    switch (shape) {
+      case 'circle': return this.drawCircle(ctx, x, y, size);
+      case 'rounded': return this.drawRoundedSquare(ctx, x, y, size, size / 4);
+      case 'star': return this.drawStar(ctx, x, y, size);
+      case 'diamond': return this.drawDiamond(ctx, x, y, size);
+      case 'triangle': return this.drawTriangle(ctx, x, y, size);
+      case 'dot': return this.drawDot(ctx, x, y, size);
+      case 'heart': return this.drawHeart(ctx, x, y, size);
+      default: ctx.fillRect(x, y, size, size);
+    }
+  }
+
+  private drawCircle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawRoundedSquare(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + size - r, y);
+    ctx.quadraticCurveTo(x + size, y, x + size, y + r);
+    ctx.lineTo(x + size, y + size - r);
+    ctx.quadraticCurveTo(x + size, y + size, x + size - r, y + size);
+    ctx.lineTo(x + r, y + size);
+    ctx.quadraticCurveTo(x, y + size, x, y + size - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    const spikes = 5, outer = size / 2, inner = outer * 0.5, cx = x + outer, cy = y + outer;
+    let rot = Math.PI / 2 * 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outer);
+    for (let i = 0; i < spikes; i++) {
+      ctx.lineTo(cx + Math.cos(rot) * outer, cy + Math.sin(rot) * outer);
+      rot += Math.PI / spikes;
+      ctx.lineTo(cx + Math.cos(rot) * inner, cy + Math.sin(rot) * inner);
+      rot += Math.PI / spikes;
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private drawDiamond(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    const h = size / 2;
+    ctx.beginPath();
+    ctx.moveTo(x + h, y);
+    ctx.lineTo(x + size, y + h);
+    ctx.lineTo(x + h, y + size);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + size / 2, y);
+    ctx.lineTo(x + size, y + size);
+    ctx.lineTo(x, y + size);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private drawDot(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    const r = size * 0.35;
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawHeart(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    const s = size * 0.9, ox = x + size / 2, oy = y + size * 0.35;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + s / 4);
+    ctx.bezierCurveTo(ox + s / 2, oy - s / 4, ox + s, oy + s / 2, ox, oy + s);
+    ctx.bezierCurveTo(ox - s, oy + s / 2, ox - s / 2, oy - s / 4, ox, oy + s / 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+private async addLogoToQR(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, resolution: number): Promise<void> {
+    if (!this.uploadedLogo) return;
+
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         const logo = new Image();
-        logo.src = reader.result as string;
         logo.onload = () => {
-          this.drawLogoOnQR(ctx, logo, resolution, canvas);
-          resolve();
+          try {
+            const percent = Math.min(Math.max(this.qrForm.get('logoSize')?.value || 15, 5), 40);
+            const logoSize = resolution * (percent / 100);
+            const x = (resolution - logoSize) / 2;
+            const y = (resolution - logoSize) / 2;
+
+            // Draw white background for logo
+            ctx.fillStyle = this.qrForm.get('bgColor')?.value || '#ffffff';
+            this.drawRoundedRect(ctx, x, y, logoSize, logoSize, logoSize * 0.1);
+            ctx.fill();
+
+            // Draw the logo with clipping
+            ctx.save();
+            this.drawRoundedRect(ctx, x, y, logoSize, logoSize, logoSize * 0.1);
+            ctx.clip();
+            ctx.drawImage(logo, x, y, logoSize, logoSize);
+            ctx.restore();
+
+            resolve();
+          } catch (err) {
+            console.error('Error adding logo:', err);
+            resolve(); // Continue even if logo fails
+          }
         };
         logo.onerror = () => {
-          console.warn("Failed to load uploaded logo. Proceeding without logo.");
-          resolve();
+          console.warn('Logo image failed to load');
+          resolve(); // Continue without logo
         };
+        logo.src = reader.result as string;
       };
       reader.onerror = () => {
-        console.warn("Failed to read uploaded logo. Proceeding without logo.");
-        resolve();
+        console.warn('Failed to read logo file');
+        resolve(); // Continue without logo
       };
-      reader.readAsDataURL(this.uploadedLogo);
-    });
-  }
-
-  private async drawBackgroundImage(
-    ctx: CanvasRenderingContext2D,
-    size: number,
-    opacity: number
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.uploadedBackground) {
+      
+      // Add null check before reading
+      if (this.uploadedLogo) {
+        reader.readAsDataURL(this.uploadedLogo);
+      } else {
         resolve();
-        return;
       }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const bgImg = new Image();
-        bgImg.src = reader.result as string;
-        bgImg.onload = () => {
-          // Draw the background image to cover the entire canvas
-          ctx.drawImage(bgImg, 0, 0, size, size);
-          
-          // Add a semi-transparent overlay to ensure QR remains readable
-          ctx.fillStyle = `rgba(255, 255, 255, ${1 - opacity})`;
-          ctx.fillRect(0, 0, size, size);
-          
-          resolve();
-        };
-        bgImg.onerror = () => {
-          console.warn("Failed to load background image. Using solid color instead.");
-          resolve();
-        };
-      };
-      reader.onerror = () => {
-        console.warn("Failed to read background image. Using solid color instead.");
-        resolve();
-      };
-      reader.readAsDataURL(this.uploadedBackground);
     });
-  }
+}
 
-  private drawLogoOnQR(
-    ctx: CanvasRenderingContext2D,
-    logo: HTMLImageElement,
-    resolution: number,
-    canvas: HTMLCanvasElement
-  ): void {
-    const logoSizePercentage = this.qrForm.get('logoSize')?.value || 24;
-    const imgSize = resolution * (logoSizePercentage / 100);
-    const x = (resolution - imgSize) / 2;
-    const y = (resolution - imgSize) / 2;
-    const cornerRadius = imgSize * 0.15;
-
-    ctx.fillStyle = this.qrForm.value.bgColor || '#ffffff';
+  private drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
     ctx.beginPath();
-    this.drawRoundedRect(ctx, x, y, imgSize, imgSize, cornerRadius);
-    ctx.fill();
-
-    ctx.drawImage(logo, x, y, imgSize, imgSize);
-  }
-
-  private drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number): void {
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
   }
 
   downloadQR(): void {
     if (!this.qrImage) {
-      this.openModal('Download Error', 'No QR code available to download.');
+      this.openModal('Download Error', 'No QR code generated.');
       return;
     }
-    
-    try {
-      const url = this.sanitizer.sanitize(SecurityContext.URL, this.qrImage);
-      if (!url) {
-        throw new Error('Invalid image URL');
-      }
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `qr-code-${new Date().getTime()}.${this.downloadOptions.format}`;
-      document.body.appendChild(link);
-      link.click();
-      
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
-    } catch (err) {
-      console.error('Download failed:', err);
-      this.openModal('Download Error', 'Failed to download QR code. Please try again.');
-    }
+
+    const url = this.sanitizer.sanitize(SecurityContext.URL, this.qrImage);
+    if (!url) return;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qr-code-${Date.now()}.${this.downloadOptions.format}`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   copyQRData(): void {
     if (!this.qrData) return;
-    
     navigator.clipboard.writeText(this.qrData).then(() => {
       this.copied = true;
-      setTimeout(() => this.copied = false, 2000);
+      setTimeout(() => (this.copied = false), 2000);
     });
   }
 }
