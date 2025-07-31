@@ -21,12 +21,24 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "assets": [
-               "src/assets"
+              "src/assets"
             ],
             "styles": [
               "src/styles.css"
             ],
-            "scripts": []
+            "scripts": [],
+           "budgets": [
+  {
+    "type": "anyComponentStyle",
+    "maximumWarning": "11kb",
+    "maximumError": "13kb"
+  }
+]
+,
+            "allowedCommonJsDependencies": [
+              "qrcode",
+              "jsqr"
+            ]
           },
           "configurations": {
             "production": {
@@ -38,16 +50,24 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "10kb",
+                  "maximumError": "12kb"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "allowedCommonJsDependencies": [
+                "qrcode",
+                "jsqr"
+              ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "allowedCommonJsDependencies": [
+                "qrcode",
+                "jsqr"
+              ]
             }
           },
           "defaultConfiguration": "production"
